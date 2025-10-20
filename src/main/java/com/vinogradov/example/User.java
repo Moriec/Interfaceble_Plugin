@@ -7,69 +7,37 @@ public class User  {
     private Long id;
     private String name;
     private String email;
-    
-    /**
-     * Конструктор по умолчанию
-     */
+
     public User() {
     }
     
-    /**
-     * Конструктор с параметрами
-     * @param id идентификатор
-     * @param name имя
-     * @param email email
-     */
+
     public User(Long id, String name, String email) {
         this.id = id;
         this.name = name;
         this.email = email;
     }
-    
-    /**
-     * Получить идентификатор пользователя
-     * @return идентификатор
-     */
+
     public Long getId() {
         return id;
     }
-    
-    /**
-     * Установить идентификатор пользователя
-     * @param id идентификатор
-     */
+
     public void setId(Long id) {
         this.id = id;
     }
-    
-    /**
-     * Получить имя пользователя
-     * @return имя
-     */
+
     public String getName() {
         return name;
     }
-    
-    /**
-     * Установить имя пользователя
-     * @param name имя
-     */
+
     public void setName(String name) {
         this.name = name;
     }
-    
-    /**
-     * Получить email пользователя
-     * @return email
-     */
+
     public String getEmail() {
         return email;
     }
-    
-    /**
-     * Установить email пользователя
-     * @param email email
-     */
+
     public void setEmail(String email) {
         this.email = email;
     }
