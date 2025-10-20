@@ -6,10 +6,13 @@ Maven плагин для автоматической генерации инт
 
 Этот плагин анализирует Java классы и автоматически создает интерфейсы, содержащие все публичные нестатичные методы исходного класса. Плагин использует JavaParser для анализа исходного кода и генерации соответствующих интерфейсов.
 
+**Особенность:** Плагин генерирует не только основной интерфейс со всеми методами, но и интерфейсы со всеми возможными комбинациями методов. Для класса с N методами генерируется 2^N - 1 интерфейсов (все возможные подмножества методов).
+
 ## Возможности
 
 - Автоматический анализ Java классов
 - Генерация интерфейсов на основе публичных методов
+- **Генерация интерфейсов со всеми возможными комбинациями методов**
 - Настраиваемые параметры (пакет, суффикс, директории)
 - Игнорирование статических и приватных методов
 - Сохранение аннотаций методов
@@ -17,6 +20,7 @@ Maven плагин для автоматической генерации инт
 - Генерация интерфейсов прямо в исходной директории
 - Автоматическое добавление необходимых импортов
 - Исключение плагина из генерации интерфейсов
+- Именование интерфейсов по схеме: `КлассМетод1Метод2...Interface`
 
 ## Установка
 
@@ -41,9 +45,10 @@ mvn clean install
             <configuration>
                 <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
                 <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
-                <interfacePackage>com.vinogradov</interfacePackage>
-                <interfaceSuffix>Interface</interfaceSuffix>
-            </configuration>
+                            <interfacePackage>com.vinogradov</interfacePackage>
+                            <interfaceSuffix>Interface</interfaceSuffix>
+                            <generateCombinations>true</generateCombinations>
+                        </configuration>
         </execution>
     </executions>
 </plugin>
@@ -57,6 +62,7 @@ mvn clean install
 | `outputDirectory` | Директория для генерации интерфейсов | `${project.basedir}/src/main/java` |
 | `interfacePackage` | Пакет для генерируемых интерфейсов | `com.vinogradov` |
 | `interfaceSuffix` | Суффикс для имен интерфейсов | `Interface` |
+| `generateCombinations` | Генерировать интерфейсы с комбинациями методов | `true` |
 
 ## Пример использования
 
@@ -118,6 +124,59 @@ public interface UserServiceInterface {
     public int getUserCount();
     
     public void clearAllUsers();
+}
+```
+
+### Сгенерированные интерфейсы с комбинациями
+
+Плагин также генерирует интерфейсы со всеми возможными комбинациями методов:
+
+#### Интерфейс с 2 методами:
+```java
+package com.vinogradov;
+
+/**
+ * Автоматически сгенерированный интерфейс с 2 методами для класса UserService
+ */
+public interface UserServiceGetUserByIdCreateUserInterface {
+    
+    public Optional<User> getUserById(Long id);
+    
+    public User createUser(String name, String email);
+}
+```
+
+#### Интерфейс с 4 методами:
+```java
+package com.vinogradov;
+
+/**
+ * Автоматически сгенерированный интерфейс с 4 методами для класса UserService
+ */
+public interface UserServiceGetUserByIdCreateUserUpdateUserDeleteUserInterface {
+    
+    public Optional<User> getUserById(Long id);
+    
+    public User createUser(String name, String email);
+    
+    public User updateUser(User user);
+    
+    public boolean deleteUser(Long id);
+}
+```
+
+#### Интерфейс для модели данных:
+```java
+package com.vinogradov;
+
+/**
+ * Автоматически сгенерированный интерфейс с 2 методами для класса User
+ */
+public interface UserGetIdGetNameInterface {
+    
+    public Long getId();
+    
+    public String getName();
 }
 ```
 

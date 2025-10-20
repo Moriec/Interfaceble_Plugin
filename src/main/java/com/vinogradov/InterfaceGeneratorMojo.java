@@ -17,8 +17,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Maven плагин для автоматической генерации интерфейсов на основе публичных методов классов
@@ -41,7 +43,7 @@ public class InterfaceGeneratorMojo extends AbstractMojo {
     /**
      * Директория для генерации интерфейсов
      */
-    @Parameter(defaultValue = "${project.build.directory}/generated-sources/interfaces")
+    @Parameter(defaultValue = "${project.basedir}/src/main/java/interfaces")
     private String outputDirectory;
 
     /**
@@ -55,6 +57,12 @@ public class InterfaceGeneratorMojo extends AbstractMojo {
      */
     @Parameter(defaultValue = "Interface")
     private String interfaceSuffix;
+
+    /**
+     * Генерировать ли интерфейсы со всеми возможными комбинациями методов
+     */
+    @Parameter(defaultValue = "true")
+    private boolean generateCombinations;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -128,11 +136,105 @@ public class InterfaceGeneratorMojo extends AbstractMojo {
      */
     private void generateInterfaceForClass(ClassOrInterfaceDeclaration classDecl, Path originalFile, Path outputPath) throws IOException {
         String className = classDecl.getNameAsString();
+        
+        // Находим все публичные методы в классе
+        List<MethodDeclaration> publicMethods = classDecl.findAll(MethodDeclaration.class)
+                .stream()
+                .filter(method -> method.isPublic() && !method.isStatic())
+                .toList();
+
+        if (publicMethods.isEmpty()) {
+            getLog().info("В классе " + className + " не найдено публичных методов для генерации интерфейса");
+            return;
+        }
+
+        // Генерируем основной интерфейс со всеми методами
+        generateMainInterface(className, publicMethods, outputPath);
+
+        // Генерируем интерфейсы с комбинациями методов
+        if (generateCombinations && publicMethods.size() > 1) {
+            generateCombinationInterfaces(className, publicMethods, outputPath);
+        }
+    }
+
+    /**
+     * Генерирует основной интерфейс со всеми методами
+     */
+    private void generateMainInterface(String className, List<MethodDeclaration> publicMethods, Path outputPath) throws IOException {
         String interfaceName = className + interfaceSuffix;
+        getLog().info("Генерируем основной интерфейс " + interfaceName + " для класса " + className);
 
-        getLog().info("Генерируем интерфейс " + interfaceName + " для класса " + className);
+        CompilationUnit interfaceCu = createInterfaceCompilationUnit(interfaceName, className, publicMethods);
+        saveInterface(interfaceCu, interfaceName, outputPath);
+    }
 
-        // Создаем новый CompilationUnit для интерфейса
+    /**
+     * Генерирует интерфейсы со всеми возможными комбинациями методов
+     */
+    private void generateCombinationInterfaces(String className, List<MethodDeclaration> publicMethods, Path outputPath) throws IOException {
+        getLog().info("Генерируем интерфейсы с комбинациями методов для класса " + className);
+        
+        // Генерируем все возможные комбинации методов (от 2 до n-1 методов)
+        for (int size = 2; size < publicMethods.size(); size++) {
+            List<List<MethodDeclaration>> combinations = generateCombinations(publicMethods, size);
+            
+            for (List<MethodDeclaration> combination : combinations) {
+                String combinationName = generateCombinationName(className, combination);
+                getLog().info("Генерируем интерфейс " + combinationName + " с " + combination.size() + " методами");
+                
+                CompilationUnit interfaceCu = createInterfaceCompilationUnit(combinationName, className, combination);
+                saveInterface(interfaceCu, combinationName, outputPath);
+            }
+        }
+    }
+
+    /**
+     * Генерирует все возможные комбинации заданного размера
+     */
+    private List<List<MethodDeclaration>> generateCombinations(List<MethodDeclaration> methods, int size) {
+        List<List<MethodDeclaration>> result = new ArrayList<>();
+        generateCombinationsHelper(methods, size, 0, new ArrayList<>(), result);
+        return result;
+    }
+
+    /**
+     * Вспомогательный метод для генерации комбинаций
+     */
+    private void generateCombinationsHelper(List<MethodDeclaration> methods, int size, int start, 
+                                          List<MethodDeclaration> current, List<List<MethodDeclaration>> result) {
+        if (current.size() == size) {
+            result.add(new ArrayList<>(current));
+            return;
+        }
+
+        for (int i = start; i < methods.size(); i++) {
+            current.add(methods.get(i));
+            generateCombinationsHelper(methods, size, i + 1, current, result);
+            current.remove(current.size() - 1);
+        }
+    }
+
+    /**
+     * Генерирует имя интерфейса на основе комбинации методов
+     */
+    private String generateCombinationName(String className, List<MethodDeclaration> methods) {
+        StringBuilder nameBuilder = new StringBuilder(className);
+        
+        for (MethodDeclaration method : methods) {
+            String methodName = method.getNameAsString();
+            // Преобразуем имя метода в CamelCase для имени интерфейса
+            String capitalizedMethodName = methodName.substring(0, 1).toUpperCase() + methodName.substring(1);
+            nameBuilder.append(capitalizedMethodName);
+        }
+        
+        nameBuilder.append(interfaceSuffix);
+        return nameBuilder.toString();
+    }
+
+    /**
+     * Создает CompilationUnit для интерфейса
+     */
+    private CompilationUnit createInterfaceCompilationUnit(String interfaceName, String className, List<MethodDeclaration> methods) {
         CompilationUnit interfaceCu = new CompilationUnit();
         
         // Добавляем пакет
@@ -149,40 +251,39 @@ public class InterfaceGeneratorMojo extends AbstractMojo {
         ClassOrInterfaceDeclaration interfaceDecl = interfaceCu.addInterface(interfaceName);
 
         // Добавляем комментарий
-        interfaceDecl.setJavadocComment("Автоматически сгенерированный интерфейс для класса " + className);
+        String comment = methods.size() == 1 ? 
+            "Автоматически сгенерированный интерфейс с методом " + methods.get(0).getNameAsString() + " для класса " + className :
+            "Автоматически сгенерированный интерфейс с " + methods.size() + " методами для класса " + className;
+        interfaceDecl.setJavadocComment(comment);
 
-        // Находим все публичные методы в классе
-        List<MethodDeclaration> publicMethods = classDecl.findAll(MethodDeclaration.class)
-                .stream()
-                .filter(method -> method.isPublic() && !method.isStatic())
-                .toList();
+        // Добавляем методы в интерфейс
+        for (MethodDeclaration method : methods) {
+            MethodDeclaration interfaceMethod = new MethodDeclaration();
+            interfaceMethod.setName(method.getName());
+            interfaceMethod.setType(method.getType());
+            interfaceMethod.setPublic(true);
+            
+            // Убираем тело метода для интерфейса
+            interfaceMethod.removeBody();
 
-        if (publicMethods.isEmpty()) {
-            getLog().info("В классе " + className + " не найдено публичных методов для генерации интерфейса");
-            return;
-        }
-
-            // Добавляем методы в интерфейс
-            for (MethodDeclaration method : publicMethods) {
-                MethodDeclaration interfaceMethod = new MethodDeclaration();
-                interfaceMethod.setName(method.getName());
-                interfaceMethod.setType(method.getType());
-                interfaceMethod.setPublic(true);
-                
-                // Убираем тело метода для интерфейса
-                interfaceMethod.removeBody();
-
-                // Копируем параметры
-                for (com.github.javaparser.ast.body.Parameter param : method.getParameters()) {
-                    interfaceMethod.addParameter(param.getType(), param.getNameAsString());
-                }
-
-                // Копируем аннотации
-                method.getAnnotations().forEach(interfaceMethod::addAnnotation);
-
-                interfaceDecl.addMember(interfaceMethod);
+            // Копируем параметры
+            for (com.github.javaparser.ast.body.Parameter param : method.getParameters()) {
+                interfaceMethod.addParameter(param.getType(), param.getNameAsString());
             }
 
+            // Копируем аннотации
+            method.getAnnotations().forEach(interfaceMethod::addAnnotation);
+
+            interfaceDecl.addMember(interfaceMethod);
+        }
+
+        return interfaceCu;
+    }
+
+    /**
+     * Сохраняет интерфейс в файл
+     */
+    private void saveInterface(CompilationUnit interfaceCu, String interfaceName, Path outputPath) throws IOException {
         // Создаем директорию для пакета
         Path packagePath = outputPath;
         if (!interfacePackage.isEmpty()) {

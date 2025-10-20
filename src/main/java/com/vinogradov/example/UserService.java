@@ -6,7 +6,7 @@ import java.util.Optional;
 /**
  * Пример сервиса для работы с пользователями
  */
-public class UserService implements com.vinogradov.UserServiceInterface {
+public class UserService {
     
     private List<User> users;
     

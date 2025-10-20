@@ -82,6 +82,7 @@
                             <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
                             <interfacePackage>com.vinogradov</interfacePackage>
                             <interfaceSuffix>Interface</interfaceSuffix>
+                            <generateCombinations>true</generateCombinations>
                         </configuration>
                     </execution>
                 </executions>

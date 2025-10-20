@@ -3,7 +3,7 @@ package com.vinogradov.example;
 /**
  * Модель пользователя
  */
-public class User implements com.vinogradov.UserInterface {
+public class User  {
     private Long id;
     private String name;
     private String email;
