@@ -1,23 +1,39 @@
-# Interface Generator Maven Plugin
+# Interfaceble Plugin
 
-Maven плагин для автоматической генерации интерфейсов на основе публичных методов классов.
+Вы когда-нибудь чувствовали, что вашему коду не хватает интерфейсов?
+Вам казалось, что принципы SOLID недостаточно усложняют вашу жизнь?
 
-## Описание
+Представляем Interfaceble Plugin - ультимативное решение для тех, кто считает, что каждая возможная комбинация методов заслуживает отдельного интерфейса!
 
-Этот плагин анализирует Java классы и автоматически создает интерфейсы, содержащие все публичные нестатичные методы исходного класса. Плагин использует JavaParser для анализа исходного кода и генерации соответствующих интерфейсов.
+## О чем это?
 
-**Особенность:** Плагин генерирует не только основной интерфейс со всеми методами, но и интерфейсы со всеми возможными комбинациями методов. Для класса с N методами генерируется 2^N - 1 интерфейсов (все возможные подмножества методов).
+Этот Maven-плагин берет ваши классы и делает с ними то, о чем вы боялись спросить. Он анализирует все публичные методы класса и генерирует интерфейсы для абсолютно всех их комбинаций.
 
-- Именование интерфейсов по схеме: `КлассМетод1Метод2...Interface`
+Да, вы не ослышались. Если у вас есть класс с 5 методами, мы сгенерируем интерфейсы для:
+- Каждой пары методов
+- Каждой тройки методов
+- Каждой четвёрки методов
+- ...и всех остальных подмножеств!
+
+Потому что кто знает, когда вам срочно понадобится UserServiceGetUserByIdAndCreateUserInterface, но строго без метода deleteUser? Теперь он у вас будет!
+
+## Ключевые особенности
+
+- Комбинаторный взрыв: Генерация огромного количества интерфейсов для одного класса. Ваш проект станет тяжелее, солиднее и внушительнее!
+- Безумный нейминг: Названия интерфейсов формируются склеиванием имен всех входящих в них методов. Наслаждайтесь шедеврами вроде OrderServiceProcessPaymentValidateUserCheckStockSendEmailInterface.
+- Полная автоматизация: Работает на фазе process-classes. Вы просто пишите код, а мы заботливо захламляем структуру вашего проекта.
 
 ## Установка
 
-1. Соберите плагин:
+Соберите этот шедевр локально:
+
 ```bash
 mvn clean install
 ```
 
-2. Добавьте плагин в ваш проект:
+## Использование
+
+Добавьте это в ваш pom.xml (на свой страх и риск):
 
 ```xml
 <plugin>
@@ -31,164 +47,21 @@ mvn clean install
                 <goal>generate</goal>
             </goals>
             <configuration>
+                <!-- Откуда брать классы -->
                 <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
-                <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
-                            <interfacePackage>com.vinogradov</interfacePackage>
-                            <interfaceSuffix>Interface</interfaceSuffix>
-                            <generateCombinations>true</generateCombinations>
-                        </configuration>
+                <!-- Куда складывать сгенерированные интерфейсы -->
+                <outputDirectory>${project.basedir}/src/main/java/interfaces</outputDirectory>
+                <interfacePackage>com.vinogradov.generated</interfacePackage>
+                <generateCombinations>true</generateCombinations>
+            </configuration>
         </execution>
     </executions>
 </plugin>
 ```
 
-## Параметры конфигурации
+## Предупреждение
 
-| Параметр | Описание | Значение по умолчанию |
-|----------|----------|----------------------|
-| `sourceDirectory` | Директория с исходными Java файлами | `${project.basedir}/src/main/java` |
-| `outputDirectory` | Директория для генерации интерфейсов | `${project.basedir}/src/main/java` |
-| `interfacePackage` | Пакет для генерируемых интерфейсов | `com.vinogradov` |
-| `interfaceSuffix` | Суффикс для имен интерфейсов | `Interface` |
-| `generateCombinations` | Генерировать интерфейсы с комбинациями методов | `true` |
-
-## Пример использования
-
-### Исходный класс
-
-```java
-public class UserService {
-    
-    public Optional<User> getUserById(Long id) {
-        // реализация
-    }
-    
-    public User createUser(String name, String email) {
-        // реализация
-    }
-    
-    public boolean deleteUser(Long id) {
-        // реализация
-    }
-    
-    private void logUserAction(String action, User user) {
-        // приватный метод - не попадет в интерфейс
-    }
-    
-    public static String getServiceVersion() {
-        // статический метод - не попадет в интерфейс
-    }
-}
-```
-
-### Сгенерированный интерфейс
-
-```java
-package com.vinogradov;
-
-import java.util.List;
-import java.util.Optional;
-import com.vinogradov.example.User;
-
-/**
- * Автоматически сгенерированный интерфейс для класса UserService
- */
-public interface UserServiceInterface {
-    
-    public Optional<User> getUserById(Long id);
-    
-    public User createUser(String name, String email);
-    
-    public User updateUser(User user);
-    
-    public boolean deleteUser(Long id);
-    
-    public List<User> getAllUsers();
-    
-    public List<User> findUsersByName(String name);
-    
-    public boolean userExistsByEmail(String email);
-    
-    public int getUserCount();
-    
-    public void clearAllUsers();
-}
-```
-
-### Сгенерированные интерфейсы с комбинациями
-
-Плагин также генерирует интерфейсы со всеми возможными комбинациями методов:
-
-#### Интерфейс с 2 методами:
-```java
-package com.vinogradov;
-
-/**
- * Автоматически сгенерированный интерфейс с 2 методами для класса UserService
- */
-public interface UserServiceGetUserByIdCreateUserInterface {
-    
-    public Optional<User> getUserById(Long id);
-    
-    public User createUser(String name, String email);
-}
-```
-
-#### Интерфейс с 4 методами:
-```java
-package com.vinogradov;
-
-/**
- * Автоматически сгенерированный интерфейс с 4 методами для класса UserService
- */
-public interface UserServiceGetUserByIdCreateUserUpdateUserDeleteUserInterface {
-    
-    public Optional<User> getUserById(Long id);
-    
-    public User createUser(String name, String email);
-    
-    public User updateUser(User user);
-    
-    public boolean deleteUser(Long id);
-}
-```
-
-#### Интерфейс для модели данных:
-```java
-package com.vinogradov;
-
-/**
- * Автоматически сгенерированный интерфейс с 2 методами для класса User
- */
-public interface UserGetIdGetNameInterface {
-    
-    public Long getId();
-    
-    public String getName();
-}
-```
-
-## Запуск
-
-Плагин автоматически выполняется в фазе `process-classes`. Для запуска:
-
-```bash
-mvn clean compile
-```
-
-Или для принудительной генерации интерфейсов:
-
-```bash
-mvn process-classes
-```
-
-## Тестирование
-
-Для тестирования плагина в основном проекте:
-
-1. Выполните команду:
-```bash
-mvn clean compile
-```
-
-2. Проверьте сгенерированные интерфейсы в `src/main/java/com/vinogradov/interfaces`
+Использование этого плагина на классах с более чем 10-15 методами может привести к:
+1. Острой боли в глазах при просмотре структуры проекта.
+2. Истерическому смеху коллег при Code Review.
+3. Исчерпанию inodes на файловой системе.
